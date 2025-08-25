@@ -1,0 +1,454 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <h1 class="mb-4">Dashboard</h1>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-primary small mb-1 fw-bold">
+                                Total Outlet
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                {{ count($outletIds) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-store fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-warning small mb-1 fw-bold">
+                                Total Brand
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                {{ count($brandIds) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="far fa-building"></i> -->
+                            <i class="fas fa-building fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-success small mb-1 fw-bold">
+                                Total Promo
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                0
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="fas fa-percentage"></i> -->
+                            <i class="fas fa-percentage fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-info small mb-1 fw-bold">
+                                Total Promo
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                0
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="fas fa-percentage"></i> -->
+                            <i class="fas fa-percentage fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label>Nama Promosi</label>
+            <select class="form-control" id="promosi_id">
+                <option value="">-- Pilih Promosi --</option>
+                @foreach($promosi as $data)
+                    <option value="{{ $data->judul_promosi }}">{{ $data->judul_promosi }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Outlet 1</label>
+            <select class="form-control" id="outlet1">
+                <option value="">-- Pilih Outlet 1 --</option>
+                @foreach ($outletIds as $id => $nama)
+                    <option value="{{ $nama['id'] }}">{{ $nama['nama_outlet'] }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Outlet 2</label>
+            <select class="form-control" id="outlet2">
+                <option value="">-- Pilih Outlet 2 --</option>
+                @foreach ($outletIds as $id => $nama)
+                    <option value="{{ $nama['id'] }}">{{ $nama['nama_outlet'] }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
+    <div id="chart-container" class="mt-4">
+        <div id="chart"></div>
+    </div>
+
+    <div id="table-container" class="mt-4">
+        <table class="table table-bordered" id="datatable">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Outlet</th>
+                    <th>Traffic</th>
+                    <th>Pax</th>
+                    <th>Bill</th>
+                    <th>Budget</th>
+                    <th>Sales</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <br>
+    {{-- Filter Periode & Brand --}}
+    <form method="GET" action="{{ route('dashboard') }}" class="row mb-4">
+        <div class="col-md-3">
+            <label for="periodeFilter">Periode:</label>
+            @php
+                $periodeSelected = request()->has('periode') ? request('periode') : 'weekly';
+            @endphp
+
+            <select name="periode" id="periodeFilter" class="form-control" onchange="this.form.submit()">
+                <option value="daily" {{ $periodeSelected == 'daily' ? 'selected' : '' }}>Harian</option>
+                <option value="weekly" {{ $periodeSelected == 'weekly' ? 'selected' : '' }}>Mingguan</option>
+                <option value="monthly" {{ $periodeSelected == 'monthly' ? 'selected' : '' }}>Bulanan</option>
+                <option value="yearly" {{ $periodeSelected == 'yearly' ? 'selected' : '' }}>Tahunan</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label for="brandFilter">Brand:</label>
+            <select name="brand" id="brandFilter" class="form-control" onchange="this.form.submit()">
+                <option value="">Semua Brand</option>
+                @foreach ($brands as $id => $nama)
+                    <option value="{{ $id }}" {{ request('brand') == $id ? 'selected' : '' }}>{{ $nama }}</option>
+                @endforeach
+            </select>
+        </div>
+    </form>
+
+    @php
+        $hasChartData = !empty($datasets)
+            && collect($datasets)->pluck('data')
+                ->flatten()
+                ->filter(fn($v) => is_numeric($v) && $v > 0)
+                ->isNotEmpty();
+    @endphp
+
+    {{-- Line Chart --}}
+    @if ($hasChartData)
+        
+        <br>
+        <div id="chartSalesApex" style="min-height: 350px;"></div>
+    @else
+        <div class="alert alert-info text-center">
+            Tidak ada data sales untuk periode dan brand terpilih. 📊
+        </div>
+    @endif
+
+      {{-- Line Chart --}}
+    @if ($hasChartData)
+            <br>
+            <br>
+            <form id="filterForm" class="row mb-4">
+                <div class="col-md-3">
+                    <label>Periode:</label>
+                    <select name="periode" id="periode" class="form-control">
+                        <option value="daily">Harian</option>
+                        <option value="weekly">Mingguan</option>
+                        <option value="monthly">Bulanan</option>
+                        <option value="yearly">Tahunan</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>Outlet:</label>
+                    <select name="outlet" id="outlet" class="form-control">
+                        <option value="">Semua Outlet</option>
+                        @foreach ($outletIds as $id => $nama)
+                            <option value="{{ $nama['id'] }}">{{ $nama['nama_outlet'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </form>
+        <br>
+        <div id="chartOutlet" style="min-height: 350px;"></div>
+    @else
+        <div class="alert alert-info text-center">
+            Tidak ada data sales untuk periode dan outlet terpilih. 📊
+        </div>
+    @endif
+
+    {{-- Bar Chart untuk Nama Promosi --}}
+    @if ($hasPromoData)
+        <div id="chartPromoBar" class="mt-5" style="min-height: 350px;"></div>
+    @else
+        <div class="alert alert-info text-center mt-5">
+            Tidak ada data promosi untuk brand terpilih. 🛑
+        </div>
+    @endif
+
+        <h3 class="mt-5">Detail Data Aktual</h3>
+        @if ($rawData->isNotEmpty())
+        <div class="box-body table-responsive">
+            <table id="actualDataTables" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Brand</th>
+                        <th>Judul Promosi</th>
+                        <th>Periode</th>
+                        <th>Sales</th>
+                        <!-- <th>Pendapatan Sales</th> -->
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($rawData as $row)
+                    <tr>
+                        <td>{{ $row->nama_brand }}</td>
+                        <td>{{ $row->judul_promosi }}</td>
+                        <td>{{ $row->periode }}</td>
+                        <td>{{ number_format($row->total_sales) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @else
+            <div class="alert alert-info text-center" role="alert">
+                Tidak ada detail data aktual yang tersedia untuk periode dan filter brand yang dipilih. 🤷‍♀️
+            </div>
+        @endif
+</div>
+@endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.3.1/js/dataTables.rowGroup.min.js"></script>
+
+<script>
+    // get-outlet-promosi
+    // Data Line Chart
+    const labels = @json($labels);
+    const datasets = @json($datasets);
+
+    @if ($hasChartData)
+        const seriesLine = datasets.map(s => ({ name: s.label, data: s.data }));
+        new ApexCharts(document.querySelector("#chartSalesApex"), {
+            chart: { type: 'line', height: 350 },
+            series: seriesLine,
+            xaxis: { categories: labels, title: { text: 'Periode' } },
+            yaxis: {
+                title: { text: 'Total Sales' },
+                labels: { formatter: v => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:0}).format(v) }
+            },
+            title: { text: 'Performa Sales tiap Brand per Program', align: 'left' },
+            stroke: { curve: 'smooth' },
+            tooltip: { y: { formatter: v => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR'}).format(v) } },
+            grid: { row: { colors:['#f3f3f3','transparent'], opacity:0.5 } }
+        }).render();
+    @endif
+
+    // Data Bar Chart
+    @if ($hasPromoData)
+        const promoLabels = @json($promoLabels);
+        const promoSeries = [{
+            name: 'Total Sales',
+            data: @json($promoSeries)
+        }];
+
+        new ApexCharts(document.querySelector("#chartPromoBar"), {
+            chart: { type: 'bar', height: 350 },
+            series: promoSeries,
+            xaxis: {
+                categories: promoLabels,
+                title: { text: 'Nama Promosi' }
+            },
+            yaxis: {
+                title: { text: 'Total Sales' },
+                labels: { formatter: v => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:0}).format(v) }
+            },
+            title: { text: 'Total Sales per Nama Program', align: 'left' },
+            plotOptions: {
+                bar: { columnWidth: '50%' }
+            },
+            tooltip: { y: { formatter: v => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR'}).format(v) } }
+        }).render();
+    @endif
+
+    // Inisialisasi DataTables seperti sekarang
+    $(function() {
+        if ($.fn.DataTable.isDataTable('#actualDataTables')) {
+            $('#actualDataTables').DataTable().destroy();
+        }
+        @if ($rawData->isNotEmpty())
+            $('#actualDataTables').DataTable({ /* opsi seperti semula */ });
+        @endif
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const periode = document.getElementById('periode');
+        const outlet = document.getElementById('outlet');
+
+        const fetchChartData = () => {
+            const params = new URLSearchParams({
+                periode: periode.value,
+                outlet: outlet.value,
+            });
+
+            fetch(`/get-outlet-promosi?${params}`)
+                .then(res => res.json())
+                .then(data => renderChart(data.labels, data.datasets));
+        };
+
+        const renderChart = (labels, datasets) => {
+            const chartEl = document.querySelector("#chartOutlet");
+            chartEl.innerHTML = ''; // clear chart container
+
+            const options = {
+                chart: { type: 'line', height: 350 },
+                series: datasets.map(dataset => ({
+                    name: dataset.label, // Ini yang penting, pakai nama promosi
+                    data: dataset.data
+                })),
+                xaxis: {
+                    categories: labels,
+                    title: { text: 'Periode' }
+                },
+                yaxis: {
+                    title: { text: 'Total Sales' },
+                    labels: {
+                        formatter: value => new Intl.NumberFormat('id-ID', {
+                            style: 'currency', currency: 'IDR', maximumFractionDigits: 0
+                        }).format(value)
+                    }
+                },
+                title: { text: 'Performa Sales tiap Outlet per Program', align: 'left' },
+                stroke: { curve: 'smooth' },
+                tooltip: {
+                    y: {
+                        formatter: value => new Intl.NumberFormat('id-ID', {
+                            style: 'currency', currency: 'IDR'
+                        }).format(value)
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    formatter: function(seriesName) {
+                        return seriesName;
+                    }
+                }
+            };
+
+            new ApexCharts(chartEl, options).render();
+        };
+
+        // Trigger fetch on load and on change
+        periode.addEventListener('change', fetchChartData);
+        outlet.addEventListener('change', fetchChartData);
+        fetchChartData(); // initial load
+    });
+</script>
+
+<script>
+    function fetchData() {
+        let promosi_id = $('#promosi_id').val();
+        let outlet1 = $('#outlet1').val();
+        let outlet2 = $('#outlet2').val();
+
+        if (promosi_id && outlet1 && outlet2) {
+            $.ajax({
+                url: '/komparasi-ajax',
+                method: 'GET',
+                data: {
+                    promosi_id: promosi_id,
+                    outlet1: outlet1,
+                    outlet2: outlet2
+                },
+                success: function (res) {
+                    renderChart(res.chartData);
+                    renderTable(res.tableData);
+                }
+            });
+        }
+    }
+
+    function renderChart(data) {
+        var options = {
+            chart: { type: 'line' },
+            series: data.series,
+            xaxis: { categories: data.categories }
+        };
+
+        var chart = new ApexCharts(document.querySelector("#chart"), options);
+        chart.render();
+    }
+
+    function renderTable(data) {
+        let tbody = $('#datatable tbody');
+        tbody.empty();
+
+        data.forEach(row => {
+            tbody.append(`
+                <tr>
+                    <td>${row.promo_date}</td>
+                    <td>${row.outlet}</td>
+                    <td>${row.traffic}</td>
+                    <td>${row.pax}</td>
+                    <td>${row.bill}</td>
+                    <td>${row.budget}</td>
+                    <td>${row.sales}</td>
+                </tr>
+            `);
+        });
+    }
+
+    // Trigger fetch on change
+    $('#promosi_id, #outlet1, #outlet2').on('change', fetchData);
+</script>
+@endpush

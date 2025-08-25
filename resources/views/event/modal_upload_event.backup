@@ -1,0 +1,225 @@
+<style>
+  textarea {
+    overflow-y: hidden; /* Hilangkan scroll vertikal */
+    resize: none; /* Opsional: agar user tidak resize manual */
+  }
+</style>
+
+<div class="modal fade" id="eventPromoModal" tabindex="-1" aria-labelledby="eventPromoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      
+      <form action="{{ route('post_promosi') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="eventPromoModalLabel">Unggah Promosi</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="jenis_event" class="form-label">Jenis Promosi</label>
+                <select name="jenis_event" id="jenis_event" class="form-select" required>
+                  <option value="">-- Pilih Jenis --</option>
+                  <option value="Diskon">Diskon</option>
+                  <option value="Voucher">Voucher</option>
+                  <option value="Bundling Menu">Bundling Menu</option>
+                  <option value="Live Event">Live Event</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="judul" class="form-label">Judul Promosi</label>
+                <input type="text" name="judul" id="judul" class="form-control" placeholder="Contoh: Promo Makan Hemat 50%" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            
+            <!-- Select Brand -->
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="brand_id" class="form-label">Brand</label>
+                  <select name="brand_id" id="brand_id" class="form-select" required>
+                    @foreach($data_outlet as $brand)
+                      <option value="{{ $brand->id }}">{{ $brand->nama_brand }}</option>
+                    @endforeach
+                  </select>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div id="outletContainer">
+                <!-- Akan di-replace -->
+              </div>
+            </div>
+
+          </div>
+
+          <div class="row mb-3">
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="poster" class="form-label">Gambar Poster</label>
+                <input class="form-control" type="file" name="poster" id="poster" accept="image/*" onchange="previewEditLogo(event)" required>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label for="mulai_promosi" class="form-label">Mulai berlaku</label>
+                <input type="date" name="mulai_promosi" id="mulai_promosi" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label for="tanggal_akhir" class="form-label">Berlaku Sampai</label>
+                <input type="date" name="tanggal_akhir" id="tanggal_akhir" class="form-control" required>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="row mb-3">
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Preview Logo Baru:</label><br>
+                <img id="logo-preview-edit" src="#" style="max-height: 250px; padding-left: 75px; display: none;">
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="deskripsi" class="form-label">Deskripsi Promosi</label>
+                <textarea name="deskripsi" oninput="autoResize(this)" id="deskripsi" rows="3" class="form-control" placeholder="Jelaskan detail promosi..." required></textarea>
+              </div>
+            </div>
+
+          </div>
+          
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success">Simpan Promosi</button>
+        </div>
+        
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<!-- Panggil library -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+  const brandSelect = new Choices('#brand_id', {
+    removeItemButton: true,
+    placeholderValue: 'Pilih Brand',
+    searchPlaceholderValue: 'Cari Brand'
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const mulaiPromosiInput = document.getElementById('mulai_promosi');
+    const today = new Date().toISOString().split('T')[0];
+    mulaiPromosiInput.setAttribute('min', today);
+
+    const akhirPromosiInput = document.getElementById('tanggal_akhir');
+    const todays = new Date().toISOString().split('T')[0];
+    akhirPromosiInput.setAttribute('min', todays);
+
+      $('#brand_id').on('change', function() {
+        var brandID = $(this).val();
+
+        if (brandID) {
+          $.ajax({
+            url: '/get-outlet/' + brandID,
+            type: 'GET',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function(data) {
+              console.log('✅ Response:', data); // Cek di console
+              
+              // Buat ulang isi <select> pakai template literal
+              const html = renderSelect('outlet_id', data);
+
+              // Misal mau ganti seluruh container
+              $('#outletContainer').html(html);
+              
+              const outletSelect = new Choices('#outlet_id', {
+                removeItemButton: true,
+                placeholderValue: 'Pilih Outlet',
+                searchPlaceholderValue: 'Cari Outlet'
+              });
+                
+            },
+            error: function(xhr, status, error) {
+              console.log('AJAX Error: ', error);
+            }
+          });
+        } else {
+          $('#outlet_id').empty();
+        }
+      });
+
+      // Fungsi bikin option HTML
+      function createOptions(opt) {
+        return `<option value="${opt.id}">${opt.nama_outlet}</option>`;
+      }
+
+      // Fungsi bikin SELECT + label
+      function renderSelect(name, dataArray) {
+        const options = dataArray.map(opt => createOptions(opt)).join('');
+
+        return `
+            <div class="form-group">
+              <label for="${name}" class="form-label">Outlet</label>
+              <select name="${name}[]" id="${name}" class="form-select" multiple required>
+                ${options}
+              </select>
+            </div>
+        `;
+      }
+
+  });
+</script>
+
+<script>
+  function previewEditLogo(event) {
+    const input = event.target;
+    const preview = document.getElementById('logo-preview-edit');
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+</script>
+
+<script>
+  function autoResize(textarea) {
+    textarea.style.height = 'auto'; // Reset height dulu
+    textarea.style.height = textarea.scrollHeight + 'px'; // Set sesuai konten
+  }
+
+  // Optional: auto resize saat halaman pertama kali load jika ada teks default
+  document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('deskripsi');
+    autoResize(textarea);
+  });
+</script>

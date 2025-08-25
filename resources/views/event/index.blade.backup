@@ -1,0 +1,386 @@
+@extends('layouts.app')
+@push('styles')
+<style>
+    .img-modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        padding-top: 60px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+    }
+
+    .img-modal-content {
+        margin: auto;
+        display: block;
+        max-width: 80%;
+        max-height: 80%;
+        animation: zoomIn 0.3s ease;
+    }
+
+    .img-modal-close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: white;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    @keyframes zoomIn {
+        from {transform: scale(0.7);}
+        to {transform: scale(1);}
+    }
+
+    .preview-img {
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .preview-img:hover {
+        opacity: 0.8;
+    }
+</style>
+@endpush
+@section('content')
+<!-- Begin Page Content -->
+    <div class="container-fluid">
+        
+        @include('event.modal_upload_event')
+        <!-- Page Heading -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-2 text-gray-800">Tabel Data Promosi Semua Outlet</h1>
+            <a href="#" data-bs-toggle="modal" data-bs-target="#eventPromoModal"
+            class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+                <i class="fas fa-cloud-upload-alt fa-sm text-white-50"></i> Unggah Promosi
+            </a>
+        </div>
+        
+        <!-- Content Row -->
+        @if (session('message'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('message') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        <!-- DataTales Example -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <div class="row align-items-center">
+                    <!-- Judul -->
+                    <div class="col-md-4 mb-2 mb-md-0">
+                    <h6 class="m-0 font-weight-bold text-primary">Data Promosi</h6>
+                    </div>
+
+                    <!-- Field & Tombol -->
+                    <div class="col-md-8">
+                    <div class="row g-2">
+                        <!-- Find Data Field -->
+                        <div class="col">
+                        <!-- <input type="text" class="form-control form-control-sm" placeholder="Find Data"> -->
+                        </div>
+                        <!-- Filter / Sort By Button -->
+                        <div class="col-auto">
+                            <button id="sortButton" type="button" class="btn btn-primary btn-sm">
+                                <i class="fas fa-sort-numeric-up-alt"></i> Sort No Asc/Desc
+                            </button>
+                        </div>
+                        <!-- Export Data Button -->
+                        <div class="col-auto">
+                            <!-- <button type="button" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-export"></i> Export Data
+                            </button> -->
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="eventTable">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Judul</th>
+                                <th>Gambar</th>
+                                <th>Deskripsi</th>
+                                <th>Status</th>
+                                <th>Tanggal Akhir</th>
+                                <th>Outlet</th>
+                                <th>Jenis Promosi</th>
+                                <th>Aksi</th> {{-- Tambahkan ini --}}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($data_even as $event)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $event->judul_promosi }}</td>
+                                    <td>
+                                        @if($event->img_path)
+                                            <img src="{{ asset($event->img_path) }}" 
+                                                alt="Poster" width="100" 
+                                                class="img-thumbnail preview-img" 
+                                                data-src="{{ asset($event->img_path) }}">
+                                        @else
+                                            Tidak ada gambar
+                                        @endif
+                                    </td>
+                                    <td>{{ $event->deskripsi }}</td>
+                                    <td>
+                                        @if($event->status == 'aktif')
+                                            <span style="background-color: #28a745; color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.875rem;">
+                                                {{ ucfirst($event->status) }}
+                                            </span>
+                                        @else
+                                            <span style="background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.875rem;">
+                                                {{ ucfirst($event->status) }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td>{{ \Carbon\Carbon::parse($event->akhir_promosi)->format('d-m-Y') }}</td>
+                                    <td>{{ $event->nama_outlet }}</td>
+                                    <td>{{ $event->jenis_promosi }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-btn"
+                                            data-id="{{ $event->id }}"
+                                            data-judul="{{ $event->judul_promosi }}"
+                                            data-deskripsi="{{ $event->deskripsi }}"
+                                            data-tanggal="{{ $event->akhir_promosi }}"
+                                            data-outlet="{{ $event->outlet_id }}"
+                                            data-jenis="{{ $event->jenis_promosi }}"
+                                            data-status="{{ $event->status }}">
+                                            Ubah
+                                        </button>
+                                        
+                                        <button class="btn btn-sm {{ $event->status === 'aktif' ? 'btn-warning' : 'btn-success' }} toggle-status-btn status-btn"
+                                            data-id="{{ $event->id }}">
+                                            {{ $event->status === 'aktif' ? 'Non Aktif' : 'Aktif' }}
+                                        </button>
+
+                                        @if(Auth::user()->role == 'Marketing' || Auth::user()->role == 'Super Admin')
+                                        <button class="btn btn-sm btn-danger delete-btn"
+                                            data-id="{{ $event->id }}">
+                                            Hapus
+                                        </button>
+                                        @endif
+
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center">Data tidak ada</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+@endsection
+
+{{-- Modal Preview --}}
+<div id="imageModal" class="img-modal" onclick="closeModal()">
+    <span class="img-modal-close" onclick="closeModal()">&times;</span>
+    <img class="img-modal-content" id="modalImage">
+</div>
+
+
+<!-- Modal Edit -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <form method="POST" action="{{ route('promosi.update') }}" enctype="multipart/form-data">
+        @csrf
+        <input type="hidden" name="id" id="edit_id">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Promosi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Judul</label>
+                        <input type="text" name="judul" id="edit_judul" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi</label>
+                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Promosi</label>
+                        <input type="text" name="jenis_event" id="edit_jenis" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="edit_status" class="form-control" required>
+                            <option value="aktif">Aktif</option>
+                            <option value="nonaktif">Nonaktif</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Tanggal Akhir</label>
+                        <input type="date" name="tanggal_akhir" id="edit_tanggal" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Outlet ID</label>
+                        <input type="number" name="outlet_id" id="edit_outlet" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Gambar Poster (Opsional)</label>
+                        <input type="file" name="poster" class="form-control">
+                        <small>Biarkan kosong jika tidak ingin mengganti gambar.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-success">Simpan Perubahan</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+            </div>
+        </div>
+    </form>
+  </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+@push('scripts')
+
+<script>
+    document.querySelectorAll('.preview-img').forEach(function(img) {
+        img.addEventListener('click', function(event) {
+            event.stopPropagation();
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("modalImage");
+            modal.style.display = "block";
+            modalImg.src = this.dataset.src;
+        });
+    });
+
+    function closeModal() {
+        document.getElementById("imageModal").style.display = "none";
+    }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.edit-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('edit_id').value = this.dataset.id;
+                document.getElementById('edit_judul').value = this.dataset.judul;
+                document.getElementById('edit_deskripsi').value = this.dataset.deskripsi;
+                document.getElementById('edit_tanggal').value = this.dataset.tanggal.substring(0, 10);
+                document.getElementById('edit_outlet').value = this.dataset.outlet;
+                document.getElementById('edit_jenis').value = this.dataset.jenis;
+                document.getElementById('edit_status').value = this.dataset.status;
+
+                $('#editModal').modal('show');
+            });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        const deactivatedButtons = document.querySelectorAll('.status-btn');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+
+                if (confirm('Yakin ingin menghapus data ini?')) {
+                    fetch(`/promosi/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message || 'Data berhasil dihapus');
+                        location.reload();
+                    })
+                    .catch(err => {
+                        alert('Terjadi kesalahan saat menghapus data');
+                        console.error(err);
+                    });
+                }
+            });
+        });
+
+        deactivatedButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+
+                if (confirm('Yakin ingin menonaktifkan promosi ini ?')) {
+                    fetch(`/promosi/deactivated/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log(data)
+                        alert(data.message || 'Promosi berhasil dinonaktifkan');
+                        location.reload();
+                    })
+                    .catch(err => {
+                        alert('Terjadi kesalahan saat menonaktifkan promosi');
+                        console.error(err);
+                    });
+                }
+            });
+        });
+    });
+</script>
+
+<!-- js untuk sortir  -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const sortButton = document.getElementById("sortButton");
+    let ascending = true; // default: ASC
+
+    sortButton.addEventListener("click", function() {
+      sortTableByNumber("eventTable", 0, ascending);
+      ascending = !ascending; // toggle ASC/DESC
+    });
+
+    function sortTableByNumber(tableId, colIndex, asc = true) {
+      const table = document.getElementById(tableId);
+      const tbody = table.tBodies[0];
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+
+      const sortedRows = rows.sort((a, b) => {
+        const aNum = parseInt(a.cells[colIndex].textContent.trim());
+        const bNum = parseInt(b.cells[colIndex].textContent.trim());
+
+        return asc ? aNum - bNum : bNum - aNum;
+      });
+
+      tbody.innerHTML = "";
+      sortedRows.forEach(row => tbody.appendChild(row));
+    }
+  });
+</script>
+
+@endpush
+  

@@ -1,0 +1,396 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <h1 class="mb-4">Dashboard</h1>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-primary small mb-1 fw-bold">
+                                Total Outlet
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                {{ count($outletIds) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-store fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-warning small mb-1 fw-bold">
+                                Total Brand
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                {{ count($brandIds) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="far fa-building"></i> -->
+                            <i class="fas fa-building fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-success small mb-1 fw-bold">
+                                Total Promo
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                0
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="fas fa-percentage"></i> -->
+                            <i class="fas fa-percentage fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase text-info small mb-1 fw-bold">
+                                Total Promo
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-dark">
+                                0
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <!-- <i class="fas fa-percentage"></i> -->
+                            <i class="fas fa-percentage fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+
+    <div class="container">
+        <h2>Grafik per Bandingan Antar Outlet</h2>
+
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <label>Judul Promosi</label>
+                <select id="judul_promosi" class="form-control">
+                    @foreach($promosi as $item)
+                        <option value="{{ $item->judul_promosi }}">{{ $item->judul_promosi }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label>Pilih Brand</label>
+                <select id="brand_id" class="form-control">
+                    <option value="">-- Pilih Brand --</option>
+                    @foreach($brands as $brand)
+                        <option value="{{ $brand->id }}">{{ $brand->nama_brand }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>Pilih Outlet 1</label>
+                <select id="outlet1" class="form-control">
+                    <option value="">-- Pilih Outlet 1 --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>Pilih Outlet 2</label>
+                <select id="outlet2" class="form-control">
+                    <option value="">-- Pilih Outlet 2 --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="row">
+                    <div class="col-6">
+                        <h4>Grafik Program Sales Antar Outlet</h4>
+                        <div id="chart" class="position-relative mb-3"></div>
+
+                        <div id="alert-no-data-chart3" class="alert alert-info text-center">
+                            Tidak ada data Sales Antar Outlet yang ditampilkan. 📊
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4>Grafik Convention Rate bulan ini</h4>
+                        <div id="chart2" class="position-relative mb-3"></div>
+                        <div id="alert-no-data-chart3" class="alert alert-info text-center">
+                            Tidak ada data Convention Rate yang ditampilkan. 📊
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- <div class="alert alert-info text-center mt-5">
+            Tidak ada data Sales antar outlet yang terpilih. 🏪
+        </div> -->
+    </div>
+    <hr style="border: 1px solid black;">
+    <br>
+    
+    <div class="container">
+        <h2>Grafik Program yang Berjalan di Brand</h2>
+
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <label>Judul Promosi</label>
+                <select id="judul_promosi_berjalan" class="form-control">
+                    @foreach($promosi as $item)
+                        <option value="{{ $item->judul_promosi }}">{{ $item->judul_promosi }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label>Pilih Brand</label>
+                <select id="brand_id_berjalan" class="form-control">
+                    <option value="">-- Pilih Brand --</option>
+                    @foreach($brands as $brand)
+                        <option value="{{ $brand->id }}">{{ $brand->nama_brand }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="row">
+                    <div class="col-12">
+                        <h4>Grafik Program di Semua Outlet</h4>
+                        <div id="chart3"></div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+@endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.3.1/js/dataTables.rowGroup.min.js"></script>
+
+
+<script>
+    $(document).ready(function () {
+        // Saat brand dipilih, load outlet
+        $('#brand_id').on('change', function () {
+            let brandId = $(this).val();
+
+            if (brandId) {
+                $.get('/get-outlet-by-brand/' + brandId, function (data) {
+                    $('#outlet1').empty().append('<option value="">-- Pilih Outlet 1 --</option>');
+                    $('#outlet2').empty().append('<option value="">-- Pilih Outlet 2 --</option>');
+                    $.each(data, function (i, item) {
+                        $('#outlet1').append(`<option value="${item.id}">${item.nama_outlet}</option>`);
+                        $('#outlet2').append(`<option value="${item.id}">${item.nama_outlet}</option>`);
+                    });
+                });
+            }
+        });
+
+        // Ketika semua input dipilih, jalankan AJAX get grafik
+        $('#brand_id, #judul_promosi, #outlet1, #outlet2').on('change', function () {
+            let brandId = $('#brand_id').val();
+            let judulPromosi = $('#judul_promosi').val();
+            let outlet1 = $('#outlet1').val();
+            let outlet2 = $('#outlet2').val();
+
+            if (brandId && judulPromosi && outlet1 && outlet2) {
+                $.ajax({
+                    url: '/get-data-aktual', // Sesuaikan dengan route controller-mu
+                    data: {
+                        brand_id: brandId,
+                        judul_promosi: judulPromosi,
+                        outlet1: outlet1,
+                        outlet2: outlet2
+                    },
+                    success: function (data) {
+                        document.getElementById("alert-no-data-chart3").style.display = 'none';
+                        // Sales Chart
+                        let salesLabels = data.sales_chart.map(item => item.outlet);
+                        let salesData = data.sales_chart.map(item => item.sales);
+
+                        let options1 = {
+                            chart: { type: 'bar' },
+                            title: { text: 'Sales Antar Outlet' },
+                            series: [{
+                                name: 'Total Sales',
+                                data: salesData
+                            }],
+                            plotOptions: {
+                                bar: {
+                                    borderRadius: 4,
+                                    distributed: true,
+                                    columnWidth: '20%',
+                                    endingShape: 'rounded',
+                                    startingShape: 'rounded',
+                                },
+                            },
+                            dataLabels: {
+                                enabled: true,
+                                style: {
+                                colors: ['#000'] // Warna teks label -> hitam
+                                }
+                            },
+                            stroke: {
+                                width: 5,
+                            },
+                            xaxis: {
+                                categories: salesLabels
+                            }
+                        };
+
+                        $("#chart").html('');
+                        let chart1 = new ApexCharts(document.querySelector("#chart"), options1);
+                        chart1.render();
+
+                        // Conversion Rate Chart
+                        let conversionLabels = data.conversion_chart.map(item => item.outlet);
+                        let conversionData = data.conversion_chart.map(item => item.conversion_rate);
+
+                        let options2 = {
+                            chart: { type: 'bar' },
+                            title: { text: 'Conversion Rate (%)' },
+                            plotOptions: {
+                                bar: {
+                                    borderRadius: 4,
+                                    distributed: true,
+                                    columnWidth: '20%',
+                                    endingShape: 'rounded',
+                                    startingShape: 'rounded',
+                                },
+                            },
+                            dataLabels: {
+                                enabled: true,
+                                style: {
+                                colors: ['#000'] // Warna teks label -> hitam
+                                }
+                            },
+                            stroke: {
+                                width: 5,
+                            },
+                            series: [{
+                                name: 'Conversion Rate',
+                                data: conversionData
+                            }],
+                            xaxis: {
+                                categories: conversionLabels
+                            },
+                            yaxis: {
+                                labels: {
+                                    formatter: function (val) {
+                                        return val + "%";
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                y: {
+                                    formatter: function (val) {
+                                        return val.toFixed(2) + "%";
+                                    }
+                                }
+                            }
+                        };
+
+                        $("#chart2").html('');
+                        let chart2 = new ApexCharts(document.querySelector("#chart2"), options2);
+                        chart2.render();
+                    }
+                });
+            }
+        });
+
+        $('#brand_id_berjalan, #judul_promosi_berjalan').on('change', function () {
+            let brandId = $('#brand_id_berjalan').val();
+            let judul_promosi_berjalan = $('#judul_promosi_berjalan').val();
+
+            
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const chartEl = document.querySelector("#chart3");
+
+        // Inisialisasi chart kosong dulu
+        let chart = new ApexCharts(chartEl, {
+            chart: {
+                type: 'bar',
+                height: 400
+            },
+            series: [{
+                name: 'Total Sales',
+                data: []
+            }],
+            xaxis: {
+                categories: []
+            }
+        });
+
+        chart.render();
+
+        // Fungsi untuk ambil data dan update chart
+        function fetchChartData() {
+            const brandId = document.querySelector("#brand_id_berjalan").value;
+            const judulPromosi = document.querySelector("#judul_promosi_berjalan").value;
+
+            if (!brandId || !judulPromosi) return;
+
+            fetch(`/get-sales-per-outlet?brand_id=${brandId}&judul_promosi=${encodeURIComponent(judulPromosi)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const labels = data.map(item => item.kode_outlet);
+                    const values = data.map(item => item.total_sales);
+
+                    chart.updateOptions({
+                        xaxis: {
+                            categories: labels
+                        }
+                    });
+
+                    chart.updateSeries([{
+                        name: 'Total Sales',
+                        data: values
+                    }]);
+                });
+        }
+
+        // Trigger saat select berubah
+        document.querySelector("#brand_id_berjalan").addEventListener("change", fetchChartData);
+        document.querySelector("#judul_promosi_berjalan").addEventListener("change", fetchChartData);
+    });
+</script>
+@endpush

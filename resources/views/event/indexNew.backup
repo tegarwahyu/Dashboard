@@ -1,0 +1,668 @@
+@extends('layouts.app')
+@push('styles')
+<style>
+    .img-modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        padding-top: 60px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+    }
+
+    .img-modal-content {
+        margin: auto;
+        display: block;
+        max-width: 80%;
+        max-height: 80%;
+        animation: zoomIn 0.3s ease;
+    }
+
+    .img-modal-close {
+        position: absolute;
+        top: 20px;
+        right: 35px;
+        color: white;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    @keyframes zoomIn {
+        from {transform: scale(0.7);}
+        to {transform: scale(1);}
+    }
+
+    .preview-img {
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .preview-img:hover {
+        opacity: 0.8;
+    }
+</style>
+@endpush
+@section('content')
+<!-- Begin Page Content -->
+    <div class="container-fluid">
+        
+        @include('event.modal_upload_event')
+        @include('event.modal_edit_event')
+        <!-- Page Heading -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-2 text-gray-800">Tabel Data Promosi Semua Outlet</h1>
+
+            <div class="d-flex gap-2">
+                <a href="#" id="" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" title="Export Posting">
+                    <i class="fas fa-file-export"></i>
+                </a>
+                <a href="#" id="eventPromoModal" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" title="Unggah Promosi">
+                    <!-- <i class="fas fa-file-download"></i> -->
+                    <i class="fas fa-edit"></i>
+                </a>
+            </div>
+        </div>
+        <!-- <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-2 text-gray-800">Tabel Data Promosi Semua Outlet</h1>
+            <a href="#" data-bs-toggle="modal" data-bs-target="#eventPromoModal"
+            class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" title="Unggah Promosi">
+            <div class="d-flex gap-2">
+                <a href="#" data-bs-toggle="modal" data-bs-target="#eventPromoModal" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" title="Unggah Promosi">
+                    <i class="fas fa-edit"></i>
+                </a>
+            </div>
+        </div> -->
+        
+        <!-- Content Row -->
+        @if (session('message'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('message') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        <!-- DataTales Example -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <div class="row align-items-center">
+                    <!-- Judul -->
+                    <div class="col-md-4 mb-2 mb-md-0">
+                    <h6 class="m-0 font-weight-bold text-primary">Data Promosi</h6>
+                    </div>
+
+                    <!-- Field & Tombol -->
+                    <div class="col-md-8">
+                    <div class="row g-2">
+                        <!-- Export Data Button -->
+                        <div class="col-auto">
+                            <!-- <button type="button" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-export"></i> Export Data
+                            </button> -->
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="eventTable">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Judul</th>
+                                <th>Gambar</th>
+                                <th>Deskripsi</th>
+                                <th>Aktifitas</th>
+                                <th>Tanggal Mulai</th>
+                                <th>Tanggal Akhir</th>
+                                <th>Outlet</th>
+                                <th>Jenis Promosi</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($data_even as $event)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $event->judul_promosi }}</td>
+                                    <td>
+                                        @if($event->img_path)
+                                            <img src="{{ asset($event->img_path) }}" data-src="{{ asset($event->img_path) }}" alt="Poster" width="100" class="img-thumbnail">
+                                        @else
+                                            Tidak ada gambar
+                                        @endif
+                                    </td>
+                                    <!-- <td>{{ $event->deskripsi }}</td> -->
+                                     <td>
+                                        @php
+                                            $maxLength = 100;
+                                            $desc = $event->deskripsi;
+                                        @endphp
+
+                                        @if (strlen($desc) <= $maxLength)
+                                            {{ $desc }}
+                                        @else
+                                            {{ Str::limit($desc, $maxLength) }}
+                                            <button class="btn btn-link btn-sm"
+                                            onclick="showDeskripsiModal(`{{ addslashes($desc) }}`)">
+                                            <i class="fa fa-eye"></i> Lihat
+                                            </button>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($event->schedule_status == 'Active')
+                                            <span style="background-color: #28a745; color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.875rem;">
+                                                {{ ucfirst($event->schedule_status) }}
+                                            </span>
+                                        @elseif($event->schedule_status == 'Scheduled')
+                                            <span style="background-color:rgb(193, 193, 193); color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.875rem;">
+                                                {{ ucfirst($event->schedule_status) }}
+                                            </span>
+                                        @else
+                                            <span style="background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 5px; font-size: 0.875rem;">
+                                                {{ ucfirst($event->schedule_status) }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td>{{ \Carbon\Carbon::parse($event->mulai_promosi)->format('d-m-Y') }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($event->akhir_promosi)->format('d-m-Y') }}</td>
+                                    <td>{{ $event->nama_outlet }}</td>
+                                    <td>{{ $event->jenis_promosi }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary edit-btn" data-id="{{ $event->id }}">
+                                            Ubah
+                                        </button>
+                                        
+                                       <button class="btn btn-sm {{ $event->is_enabled == 1 ? 'btn-warning' : 'btn-success' }} 
+                                       toggle-status-btn change-status-btn" data-id="{{ $event->id }}">
+                                            {{ $event->is_enabled == 1 ? 'Deactivated' : 'Activated' }}
+                                        </button>
+
+                                        @if(Auth::user()->role == 'Marketing' || Auth::user()->role == 'Super Admin')
+                                        <button class="btn btn-sm btn-danger delete-btn"
+                                            data-id="{{ $event->id }}">
+                                            Hapus
+                                        </button>
+                                        @endif
+
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center">Data tidak ada</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+@endsection
+
+<!-- Modal -->
+<div class="modal fade" id="deskripsiModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Deskripsi Promosi</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="deskripsiContent"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{-- Modal Preview --}}
+<div id="imageModal" class="img-modal" onclick="closeModal()">
+    <span class="img-modal-close" onclick="closeModal()">&times;</span>
+    <img class="img-modal-content" id="modalImage">
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+@push('scripts')
+
+<script>
+    document.querySelectorAll('.preview-img').forEach(function(img) {
+        img.addEventListener('click', function(event) {
+            event.stopPropagation();
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("modalImage");
+            modal.style.display = "block";
+            modalImg.src = this.dataset.src;
+        });
+    });
+
+    function closeModal() {
+        document.getElementById("imageModal").style.display = "none";
+    }
+
+    function showDeskripsiModal(content) {
+        document.getElementById('deskripsiContent').innerText = content;
+        new bootstrap.Modal(document.getElementById('deskripsiModal')).show();
+    }
+</script>
+
+<script>
+    $(document).ready(function() {
+        let lastOutletData = [];
+        let outletChoicesInstance = null;
+
+        // 1) Load Outlet jika Brand dipilih
+        $('#brand_id2').on('change', function() {
+            const brandID = $(this).val();
+            if (brandID) {
+                $.ajax({
+                    url: '/get-outlet/' + brandID,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        lastOutletData = data; // Ini seharusnya array objek outlet: [{id:.., nama_outlet:..}, ...]
+                        
+                        // Pastikan ID yang dirender adalah 'outlet_id2'
+                        const html = renderSelect('outlet_id2', data);
+                        $('#outletContainer2').html(html);
+
+                        // Re-init Choices.js dan simpan instancenya
+                        if (outletChoicesInstance) {
+                            outletChoicesInstance.destroy();
+                        }
+                        outletChoicesInstance = new Choices('#outlet_id2', {
+                            removeItemButton: true,
+                            placeholderValue: 'Pilih Outlet',
+                            searchPlaceholderValue: 'Cari Outlet'
+                        });
+
+                        // Kalau di hidden ada outlet_datetime (edit), set selected
+                        if ($('#outletDateTimeField2').val()) {
+                            const dt = JSON.parse($('#outletDateTimeField2').val());
+                            // Ambil hanya ID outlet dan pastikan bertipe string
+                            const selected = dt.map(o => String(o.outlet_id)); 
+                            
+                            if (outletChoicesInstance) {
+                                outletChoicesInstance.setChoiceByValue(selected);
+                            } else {
+                                $('#outlet_id2').val(selected);
+                            }
+                            // Pemicu 'change' di sini untuk mengisi data KPI saat page load/edit
+                            $('#outlet_id2').trigger('change'); 
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching outlets:", status, error, xhr.responseText);
+                        alert("Terjadi kesalahan saat memuat data outlet.");
+                    }
+                });
+            } else {
+                $('#outletContainer2').empty();
+                if (outletChoicesInstance) {
+                    outletChoicesInstance.destroy();
+                    outletChoicesInstance = null;
+                }
+            }
+        });
+
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // 2) Buat <option>
+        // Mengasumsikan data dari /get-outlet/{brandID} adalah array objek outlet langsung,
+        // seperti: [{id: 8, nama_outlet: "Outlet D", ...}]
+        function createOptions(opt) {
+            // console.log("Creating option for:", opt); // Debug: Periksa struktur 'opt'
+            return `<option value="${opt.outlet.id}">${opt.outlet.nama_outlet}</option>`;
+        }
+
+        // 3) Buat <select>
+        function renderSelect(id, dataArray) {
+            const options = dataArray.map(opt => createOptions(opt)).join('');
+            return `
+                <div class="form-group">
+                    <label for="${id}" class="form-label">Outlet</label>
+                    <select name="${id}[]" id="${id}" class="form-select" multiple required>
+                        ${options}
+                    </select>
+                </div>
+            `;
+        }
+
+        // 4) Buat Date + Table KPI
+        function generateOutletDateFields(selectedOutlets2, dataArray2) {
+            const container = $('#outletDateFieldsContainer2');
+            container.empty();
+
+            selectedOutlets2.forEach(outletId => {
+                // PERBAIKAN: Cari berdasarkan o.outlet.id, bukan o.id
+                // Karena dataArray2 (lastOutletData) berisi objek dengan properti 'outlet'
+                const foundOutletWrapper = dataArray2.find(o => String(o.outlet.id) === String(outletId)); 
+                const outletData = foundOutletWrapper ? foundOutletWrapper : null; // Ambil objek 'outlet' yang sebenarnya
+                $('#id').val(outletData.id);
+                $('#img_path_edit').val(outletData.img_path);
+                $('#promosi_kpi_id').val(outletData.promosi_kip[0].id);
+                const mulaiPromosi = outletData.mulai_promosi.split(' ')[0];
+                const akhirPromosi = outletData.akhir_promosi.split(' ')[0];
+                // console.log(outletData)
+                if (outletData) { 
+                    container.append(`
+                        <h6><strong>${outletData.outlet.nama_outlet}</strong></h6>
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <div class="mb-2">
+                                    <label>Mulai Promosi:</label>
+                                    <input type="date" class="form-control outlet-mulai" id="mulai_date_edit" name="mulai_date_edit" value="${mulaiPromosi}">
+                                </div>
+                                <div class="mb-2">
+                                    <label>Akhir Promosi:</label>
+                                    <input type="date" class="form-control outlet-akhir" id="akhir_date_edit" name="akhir_date_edit" value="${akhirPromosi}">
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm mb-0 text-center align-middle">
+                                        <thead class="table-success">
+                                            <tr><th>Traffic</th><th>Pax</th><th>Bill</th><th>Budget/hari</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><input type="number" min="0" class="form-control traffic-input" name="traffic_edit" id="traffic_edit" value="${outletData.promosi_kip[0].traffic}"></td>
+                                                <td><input type="number" min="0" class="form-control pax-input" name="pax_edit" id="pax_edit" value="${outletData.promosi_kip[0].pax}"></td>
+                                                <td><input type="number" min="0" class="form-control bill-input" name="bill_edit" id="bill_edit" value="${outletData.promosi_kip[0].bill}"></td>
+                                                <td>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">Rp</span>
+                                                        <input type="number" min="0" class="form-control budget-input" name="budget_edit" id="budget_edit" value="${outletData.promosi_kip[0].budget}">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <thead class="table-success"><tr><th colspan="4">Sales</th></tr></thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="4">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">Rp</span>
+                                                        <input type="number" min="0" class="form-control sales-input" name="sales_edit" id="sales_edit" value="${outletData.promosi_kip[0].sales}">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <hr style="border: 1px solid black;">
+                    `);
+                } else {
+                    console.warn(`Outlet data (nested) not found for ID: ${outletId}`);
+                }
+            });
+        }
+
+        // 6) Outlet select listener
+        $(document).on('change', '#outlet_id2', function() {
+            const selected = Array.isArray($(this).val()) ? $(this).val() : [];
+            if (selected && selected.length) {
+                // Panggil generateOutletDateFields dengan data yang sesuai
+                generateOutletDateFields(selected, lastOutletData);
+                
+                // Setelah field dibuat/diperbarui, isi dengan data lama jika ada
+                if ($('#outletDateTimeField2').val()) {
+                    const storedData = JSON.parse($('#outletDateTimeField2').val());
+                    selected.forEach(outletId => {
+                        const kpiData = storedData.find(d => String(d.outlet_id) === String(outletId));
+                        if (kpiData) {
+                            $(`.outlet-mulai[data-outlet-id="${outletId}"]`).val(kpiData.mulai);
+                            $(`.outlet-akhir[data-outlet-id="${outletId}"]`).val(kpiData.akhir);
+                            $(`.traffic-input[data-outlet-id="${outletId}"]`).val(kpiData.traffic);
+                            $(`.pax-input[data-outlet-id="${outletId}"]`).val(kpiData.pax);
+                            $(`.bill-input[data-outlet-id="${outletId}"]`).val(kpiData.bill);
+                            $(`.budget-input[data-outlet-id="${outletId}"]`).val(kpiData.budget);
+                            $(`.sales-input[data-outlet-id="${outletId}"]`).val(kpiData.sales);
+                        }
+                    });
+                }
+            } else {
+                $('#outletDateFieldsContainer2').empty();
+            }
+            generateOutletDateTimeArray(); 
+        });
+
+        function generateOutletDateTimeArray() {
+            const data = [];
+            $('#outletDateFieldsContainer2').find('.row.mb-2').each(function() {
+                const outletId = $(this).data('outlet-id');
+                const mulai = $(this).find('.outlet-mulai').val();
+                const akhir = $(this).find('.outlet-akhir').val();
+                const traffic = $(this).find('.traffic-input').val();
+                const pax = $(this).find('.pax-input').val();
+                const bill = $(this).find('.bill-input').val();
+                const budget = $(this).find('.budget-input').val();
+                const sales = $(this).find('.sales-input').val();
+
+                data.push({
+                    outlet_id: outletId,
+                    mulai: mulai,
+                    akhir: akhir,
+                    traffic: traffic,
+                    pax: pax,
+                    bill: bill,
+                    budget: budget,
+                    sales: sales
+                });
+            });
+            $('#outletDateTimeField2').val(JSON.stringify(data));
+        }
+
+
+        // 8) Trigger Edit Promosi
+        $('.edit-btn').on('click', function() {
+            let id = $(this).data('id');
+            $.ajax({
+                url: '/promosi/' + id,
+                type: 'GET',
+                success: function(data) {
+                    $('#eventEditPromoForm').attr('action', '/promosi/' + id);
+                    $('#formMethod2').val('PATCH');
+
+                    $('#jenis_event2').val(data.jenis_promosi);
+                    $('#judul2').val(data.judul_promosi);
+                    $('#deskripsi2').val(data.deskripsi);
+
+                    $('#brand_id2').val(data.outlet.brand.id).trigger('change');
+
+                    if (data.promosi_kpi && data.promosi_kpi.length > 0) {
+                        const item = data.promosi_kpi[0]; 
+                        const kpiForHiddenField = [{
+                            outlet_id: String(data.outlet.id), 
+                            mulai: data.mulai_promosi ? data.mulai_promosi.split(' ')[0] : '', 
+                            akhir: data.akhir_promosi ? data.akhir_promosi.split(' ')[0] : '', 
+                            traffic: item ? item.traffic : '', 
+                            pax: item ? item.pax : '',
+                            bill: item ? item.bill : '',
+                            budget: item ? item.budget : '',
+                            sales: item ? item.sales : ''
+                        }];
+                        $('#outletDateTimeField2').val(JSON.stringify(kpiForHiddenField));
+                    } else {
+                        $('#outletDateTimeField2').val(''); 
+                    }
+
+                    $(document).one('ajaxStop', function() {
+                        const outletIdToSelect = String(data.outlet.id); 
+                        
+                        if (outletChoicesInstance) {
+                            outletChoicesInstance.setChoiceByValue(outletIdToSelect);
+                        } else {
+                            $('#outlet_id2').val([outletIdToSelect]);
+                        }
+                        
+                        $('#outlet_id2').trigger('change');
+                    });
+
+                    if (data.img_path) {
+                        $('#logo-preview-edit2').attr('src', data.img_path).show();
+                        $('#poster2').removeAttr('required');
+                    } else {
+                        $('#logo-preview-edit2').hide();
+                        $('#poster2').attr('required', true); 
+                    }
+
+                    $('#eventeditPromoModal').modal('show');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching promotion data:", status, error, xhr.responseText);
+                    alert("Terjadi kesalahan saat memuat data promosi. Silakan coba lagi.");
+                }
+            });
+        });
+
+        // Handle submit form edit promosi
+        $('#eventEditPromoForm').on('submit', function(e) {
+            e.preventDefault(); // Mencegah submit form default
+            generateOutletDateTimeArray();
+            let formData = new FormData(this);
+            // Laravel perlu _method PATCH/PUT untuk route update
+            // formData.append('_method', 'PATCH'); // Ini sudah dihandle oleh hidden input id="formMethod2"
+
+            // Ambil ID dari hidden input atau variabel currentPromoId
+            // Anda sudah mengatur action form secara dinamis di event edit-btn click
+            // const formActionUrl = $(this).attr('action');
+            var id = $('#id').val();
+            $.ajax({
+                url: '/promosi/update/' + id, // URL akan '/promosi/update/{id}'
+                type: 'POST', // Metode POST karena _method PATCH digunakan
+                data: formData,
+                processData: false, 
+                contentType: false, 
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Ambil CSRF dari meta tag
+                },
+                success: function(response) {
+                    // alert('Promosi berhasil diperbarui!');
+                    $('eventEditPromoForm')[0].reset();
+                    $('#eventeditPromoModal').modal('hide');
+                    // Jika ada DataTable yang menampilkan promosi, reload datanya
+                    // $('.aktual-table').DataTable().ajax.reload(); 
+                },
+                error: function(xhr) {
+                    console.error("Error updating promotion:", xhr.responseText);
+                    let errorMessage = 'Terjadi kesalahan saat memperbarui promosi. Silakan coba lagi.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    alert(errorMessage);
+                }
+            });
+        });
+    });
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        const deactivatedButtons = document.querySelectorAll('.change-status-btn');
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+
+                if (confirm('Yakin ingin menghapus data ini?')) {
+                    fetch(`/promosi/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message || 'Data berhasil dihapus');
+                        location.reload();
+                    })
+                    .catch(err => {
+                        alert('Terjadi kesalahan saat menghapus data');
+                        console.error(err);
+                    });
+                }
+            });
+        });
+
+        deactivatedButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+
+                if (confirm('Yakin ingin menonaktifkan promosi ini ?')) {
+                    fetch(`/promosi/deactivated/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        // console.log(data)
+                        // alert(data.message || 'Promosi berhasil dinonaktifkan');
+                        // $('#eventTable').DataTable().draw();
+                        location.reload();
+                    })
+                    .catch(err => {
+                        // alert('Terjadi kesalahan saat menonaktifkan promosi');
+                        console.error(err);
+                    });
+                }
+            });
+        });
+    });
+</script>
+
+<!-- js untuk datatable  -->
+
+<script>
+  $(document).ready(function() {
+    $('#eventTable').DataTable({
+      // Opsi: urut default kolom No ASC
+      order: [[0, 'asc']],
+
+      // Opsi: bahasa Indonesia (opsional)
+      language: {
+        search: "Cari:",
+        lengthMenu: "Tampilkan _MENU_ data",
+        zeroRecords: "Data tidak ditemukan",
+        info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+        infoEmpty: "Tidak ada data",
+        infoFiltered: "(difilter dari _MAX_ total data)",
+        paginate: {
+          first: "Pertama",
+          last: "Terakhir",
+          next: "Berikutnya",
+          previous: "Sebelumnya"
+        },
+      }
+    });
+
+    document.querySelectorAll('.img-thumbnail').forEach(function(img) {
+        img.addEventListener('click', function(event) {
+            event.stopPropagation();
+            var modal = document.getElementById("imageModal");
+            var modalImg = document.getElementById("modalImage");
+            modal.style.display = "block";
+            modalImg.src = this.dataset.src;
+        });
+    });
+
+  });
+</script>
+
+@endpush
+  

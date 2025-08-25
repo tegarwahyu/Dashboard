@@ -1,0 +1,360 @@
+@extends('layouts.app')
+<!-- DataTables core CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<!-- DataTables RowGroup extension CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.3.1/css/rowGroup.dataTables.min.css">
+<style>
+  tr.dtrg-group {
+    background: #eee;
+  }
+  tr.dtrg-group:hover {
+    background: #ddd;
+  }
+</style>
+@section('content')
+<!-- Begin Page Content -->
+    <div class="container-fluid">
+        
+        <!-- Content Row -->
+        @if (session('message'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('message') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        <!-- Notifikasi error validasi -->
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-2 text-gray-800">Master Aktual</h1>
+
+            <div class="d-flex gap-2">
+                <a href="#" id="btnFormAktual" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" title="Input Aktual">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="#" id="btnDownloadTemplate" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm" title="Download Template Aktual">
+                    <i class="fas fa-file-download"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div id="divFormAktual" class="card shadow mb-4" style="display: none;">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Form Aktual</h6>
+            </div>
+            <div class="card-body">
+                <form id="formAktual" enctype="multipart/form-data">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Promosi</label>
+                                <select name="promosi_id" id="promosi_id" class="form-select" required>
+                                    <option value="" disabled selected>Pilih Promosi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div id="targetSCS">
+                                    <!-- Field date per outlet akan di-generate di sini -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Brand</label>
+                                <input type="text" id="brand_name" class="form-control" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Outlet</label>
+                                <input type="text" id="outlet_name" class="form-control" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="brand_id" id="brand_id_hidden">
+                    <input type="hidden" name="outlet_id" id="outlet_id_hidden">
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelScs">Batal</button>
+                        <button type="submit" class="btn btn-success">Simpan Aktual</button>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+
+        <!-- DataTales Example -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Data Aktual</h6>
+            </div>
+            <div class="card-body">
+                <div class="box-body table-responsive">
+                    <table class="table table-stiped table-bordered aktual-table">
+                        <thead>
+                            <th width="5%">No</th>
+                            <th>Nama Promosi</th>
+                            <th>Nama Outlet</th>
+                            <th>Traffic</th>
+                            <th>Pax</th>
+                            <th>Bill</th>
+                            <th>Budget</th>
+                            <th>Sales</th>
+                            <th width="10%"><i class="fa fa-cog"></i></th>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@endsection
+
+@push('scripts')
+
+<!-- DataTables core JS -->
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<!-- DataTables RowGroup extension JS -->
+<script src="https://cdn.datatables.net/rowgroup/1.3.1/js/dataTables.rowGroup.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    
+    $('#btnFormAktual').click(function() {
+        $('#divFormAktual').toggle('show');
+
+        if ($('#divFormAktual').is(':visible')) {
+            // Jalankan AJAX
+            $.ajax({
+                url: '/aktualAPI/getDataFormAktual',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    const promosiData = response.data;
+                    // console.log(promosiData)
+                    // Kosongkan promosi_id
+                    $('#promosi_id').empty().append('<option value="" disabled selected>Pilih Promosi</option>');
+
+                    promosiData.forEach(function(promo) {
+
+                        $('#promosi_id').append(
+                            `<option value="${promo.id}" 
+                                data-outlet='${JSON.stringify(promo.outlet)}'>
+                                ${promo.judul_promosi}
+                            </option>`
+                        );
+                    });
+
+                    // Bind event change sekali di sini
+                    $('#promosi_id').off('change').on('change', function() {
+                        let selectedOption = $(this).find(':selected');
+                        let outlet = JSON.parse(selectedOption.attr('data-outlet') || '{}');
+
+                        // Set text outlet & brand
+                        $('#outlet_name').val(outlet.nama_outlet || '-');
+                        $('#brand_name').val(outlet.brand ? outlet.brand.nama_brand : '-');
+
+                        // Set hidden input
+                        $('#outlet_id_hidden').val(outlet.id || '');
+                        $('#brand_id_hidden').val(outlet.brand ? outlet.brand.id : '');
+
+                        // Generate target container
+                        const container = $('#targetSCS');
+                        container.empty();
+                        container.append(`
+                                <label for="file" class="form-label">Upload data aktual</label>
+                                <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls" required>
+                                <p style="font-size: 12px; margin-top: 4px;">Silakan upload file Excel berisikan data Aktual</p>
+                        `);
+                        
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                }
+            });
+        } else {
+            $('#formAktual')[0].reset();
+            $('#targetSCS').empty();
+        }
+    });
+
+    // Tombol batal
+    $('#cancelScs').click(function() {
+        $('#divFormAktual').toggle('show');
+        $('#formAktual')[0].reset();
+        $('#targetSCS').empty();
+    });
+
+    $('#btnDownloadTemplate').click(function(e) {
+        e.preventDefault();
+
+        $.ajax({
+            url: '/aktualAPI/download-template',
+            type: 'GET',
+            xhrFields: {
+                responseType: 'blob' // Supaya file binary
+            },
+            success: function(data) {
+                // Buat blob dan link sementara
+                const blob = new Blob([data]);
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = 'Template-Aktual.xlsx';
+                link.click();
+            },
+            error: function(xhr, status, error) {
+                alert('Gagal download template!');
+                console.error(error);
+            }
+        });
+    });
+    
+    
+});
+    
+</script>
+<script>
+$(document).ready(function() {
+    let collapsedGroups = {};
+    let table = $('.aktual-table').DataTable({
+      serverSide: true,
+      processing: true,
+      ajax: '/aktualAPI',
+      columns: [
+        { data: 'DT_RowIndex', searchable: false, sortable: false },
+        { data: 'promosi.judul_promosi' },
+        { data: 'promosi.outlet.nama_outlet' },
+        { data: 'traffic' },
+        { data: 'pax' },
+        { data: 'bill' },
+        { data: 'budget' },
+        { data: 'sales' },
+        { data: 'aksi', searchable: false, sortable: false }
+      ],
+      order: [[1, 'asc']],
+      rowGroup: {
+            dataSrc: 'promosi.judul_promosi',
+            startRender: function (rows, group) {
+            // ⏬ SET DEFAULT COLLAPSED kalau group belum pernah di klik
+            if (typeof collapsedGroups[group] === 'undefined') {
+                collapsedGroups[group] = true; // TRUE = collapsed default
+            }
+            let collapsed = collapsedGroups[group];
+
+            rows.nodes().each(function (r) {
+                if (collapsed) {
+                $(r).hide();
+                } else {
+                $(r).show();
+                }
+            });
+
+            return $('<tr/>')
+                .append('<td colspan="9" style="cursor:pointer; font-weight:bold;">' + 
+                (collapsed ? '➕ ' : '➖ ') + group + '</td>')
+                .attr('data-name', group)
+                .toggleClass('collapsed', collapsed);
+            }
+        }
+    });
+
+    $('.aktual-table tbody').on('click', 'tr.dtrg-group', function () {
+        let group = $(this).data('name');
+        collapsedGroups[group] = !collapsedGroups[group];
+        table.draw(false); // redraw halaman sekarang
+    });
+
+    
+    // Inisialisasi AJAX dengan default settings termasuk CSRF dan error handling
+
+    // Fungsi delete terpadu dengan konfigurasi khusus DELETE
+    function deleteData(url, callback) {
+        $.ajaxSetup({
+            headers:{
+                'X_CSRF_TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        if (confirm('Yakin ingin menghapus data?')) {
+             $.ajax({
+                url: url,
+                type: 'DELETE',
+                dataType: 'JSON',
+                data:{
+                    '_token': '{{ csrf_token() }}',
+                },
+                success: function (response) {
+                    if (typeof callback === 'function') {
+                        callback(response);
+                    } else {
+                        // Default behavior
+                        alert(response.message || 'Data berhasil dihapus');
+                        if (typeof table !== 'undefined') {
+                            table.ajax.reload();
+                        }
+                    }
+                },
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                }
+            })
+        }
+    }
+});
+</script>
+
+<script>
+$(document).ready(function() {
+    $('#formAktual').on('submit', function(e) {
+        e.preventDefault(); // Mencegah submit form default
+
+        // Siapkan data dari form
+        let formData = new FormData(this);
+
+        $.ajax({
+            url: '/aktualAPI', // Ganti dengan route POST kamu
+            type: 'POST',
+            data: formData,
+            processData: false, // Supaya FormData tidak diproses menjadi query string
+            contentType: false, // Supaya jQuery tidak set Content-Type secara manual
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Kalau pakai Laravel atau framework yg pakai CSRF
+            },
+            success: function(response) {
+                // Handle response sukses
+                // console.log(response);
+                alert('Data berhasil disimpan!');
+                $('#divFormAktual').toggle('show');
+                $('#formAktual')[0].reset();
+                // Misalnya close modal, reset form, reload data table, dll
+                $('.aktual-table').DataTable().ajax.reload();
+            },
+            error: function(xhr) {
+                // Handle error
+                console.log(xhr.responseText);
+                alert('Terjadi kesalahan. Silakan cek kembali.');
+            }
+        });
+    });
+
+});
+</script>
+@endpush

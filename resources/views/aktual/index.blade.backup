@@ -1,0 +1,304 @@
+@extends('layouts.app')
+@section('content')
+<!-- Begin Page Content -->
+    <div class="container-fluid">
+        
+        <!-- Content Row -->
+        @if (session('message'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('message') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        <!-- Notifikasi error validasi -->
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-2 text-gray-800">Master SmartChoice Suite</h1>
+            <a href="#" id="btnFormAktual" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm">
+                <i class="fas fa-search-dollar"></i>  Input SCS
+            </a>
+        </div>
+        
+        <div id="divFormAktual" class="card shadow mb-4" style="display: none;">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Form SmartChoice Suite</h6>
+            </div>
+            <div class="card-body">
+                <form id="formAktual">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Brand</label>
+                                    <select name="brand" id="brand_id" class="form-select" required>
+                                        <option value=""></option>
+                                    </select>
+                            </div>
+                        </div>
+                              
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Outlet</label>
+                                    <select name="outlet" id="outlet_id" class="form-select" required>
+                                        <option value=""></option>
+                                    </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="targetSCS">
+                        <!-- Field date per outlet akan di-generate di sini -->
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelScs">Batal</button>
+                        <button type="submit" class="btn btn-success">Simpan Promosi</button>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+
+        <!-- DataTales Example -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Data Aktual</h6>
+            </div>
+            <div class="card-body">
+                <div class="box-body table-responsive">
+                    <table class="table table-stiped table-bordered aktual-table">
+                        <thead>
+                            <th width="5%">No</th>
+                            <th>Promosi ID</th>
+                            <th>Traffic</th>
+                            <th>Pax</th>
+                            <th>Bill</th>
+                            <th>Budget</th>
+                            <th>Sales</th>
+                            <th width="15%"><i class="fa fa-cog"></i></th>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@endsection
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        
+        $('#btnFormAktual').click(function(){
+            
+            $('#divFormAktual').toggle('show');
+
+            if ($('#divFormAktual').is(':visible')) {
+                // Jalankan AJAX
+                $.ajax({
+                    url: '/aktualAPI/getDataFormAktual',
+                    type: 'GET', // atau 'POST' sesuai kebutuhan
+                    dataType: 'json',
+                    success: function(response) {
+                        // Lakukan sesuatu dengan data dari server
+                        // Kosongkan dulu
+                        
+                            brandsData = response.data;
+
+                            // Kosongkan dulu
+                            $('#brand_id').empty().append('<option value="" disabled selected required>Pilih Brand</option>');
+                            $('#outlet_id').empty().append('<option value="" disabled selected required>Pilih Outlet</option>');
+
+                            // Loop brand
+                            brandsData.forEach(function(brand) {
+                            $('#brand_id').append(
+                                `<option value="${brand.id}">${brand.nama_brand}</option>`
+                            );
+                            });
+
+                            // ❌ Jangan auto pilih brand atau outlet
+                            // Biarkan user memilih sendiri
+
+                            // Handler: Saat brand dipilih, isi outlet sesuai brand
+                            $('#brand_id').on('change', function() {
+                            let selectedBrandId = $(this).val();
+
+                            let selectedBrand = brandsData.find(b => b.id == selectedBrandId);
+
+                            $('#outlet_id').empty().append('<option value="" disabled selected required>Pilih Outlet</option>');
+
+                            if (selectedBrand && selectedBrand.outlets) {
+                                selectedBrand.outlets.forEach(function(outlet) {
+                                $('#outlet_id').append(
+                                    `<option value="${outlet.id}">${outlet.nama_outlet}</option>`
+                                );
+                                });
+                            }
+                            
+
+                    });
+                        
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                    }
+                });
+            } else {
+                $('#divFormAktual')[0].reset();
+            }
+        });
+    });
+    
+
+    $('#outlet_id').on('change', function() {
+        const container = $('#targetSCS');
+        container.empty(); // Kosongkan container dulu
+        // console.log('ada perubahan di select outlet');
+        container.append(`
+                <h6><strong>Target Outlet</strong></h6>
+
+                <div class="row mb-6">
+                    <!-- Kolom kiri: date & target -->
+
+                    <div class="col-md-12">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm mb-0 text-center align-middle">
+                        <thead class="table-success">
+                            <tr>
+                            <th>Traffic/hari</th>
+                            <th>Pax/hari</th>
+                            <th>Bill/hari</th>
+                            <th>Budget/hari</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                            <td>
+                                <input type="number" min="0" class="form-control" name="traffic_per_hari">
+                            </td>
+                            <td>
+                                <input type="number" min="0" class="form-control" name="pax_per_hari">
+                            </td>
+                            <td>
+                                <input type="number" min="0" class="form-control" name="bill_per_hari">
+                            </td>
+                            <td>
+                                <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" min="0" class="form-control" name="budget_per_hari">
+                                </div>
+                            </td>
+                            </tr>
+                        </tbody>
+                        <thead class="table-success">
+                            <tr>
+                            <th colspan="4">Sales/hari</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                            <td colspan="4">
+                                <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" min="0" class="form-control" name="sales_per_hari">
+                                </div>
+                            </td>
+                            </tr>
+                        </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <hr style="border: 1px solid black;">
+            `);
+    });
+
+    $('#cancelScs').click(function(){
+        $('#divFormAktual').toggle('show');
+        $('#divFormAktual')[0].reset();
+    });
+    
+</script>
+<script>
+    let table;
+    
+    $(function () {
+        table = $('.aktual-table').DataTable({
+            responsive: true,
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: {
+                url: '/aktualAPI',
+            },
+            columns: [
+                {data: 'DT_RowIndex', searchable: false, sortable: false},
+                {data: 'promosi_id'},
+                {data: 'traffic'},
+                {data: 'pax'},
+                {data: 'bill'},
+                {data: 'budget'}, // ✅ Hapus spasi/tab
+                {data: 'sales'},
+                {data: 'aksi', searchable: false, sortable: false},
+            ]
+        });
+
+        
+    });
+</script>
+
+<script>
+$(document).ready(function() {
+    $('#formAktual').on('submit', function(e) {
+        e.preventDefault(); // Mencegah submit form default
+
+        // Siapkan data dari form
+        let formData = new FormData(this);
+
+        // Jika kamu ingin lihat data yg dikirim:
+        // for (var pair of formData.entries()) {
+        //     console.log(pair[0]+ ', ' + pair[1]); 
+        // }
+
+        $.ajax({
+            url: '/aktualAPI', // Ganti dengan route POST kamu
+            type: 'POST',
+            data: formData,
+            processData: false, // Supaya FormData tidak diproses menjadi query string
+            contentType: false, // Supaya jQuery tidak set Content-Type secara manual
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Kalau pakai Laravel atau framework yg pakai CSRF
+            },
+            success: function(response) {
+                // Handle response sukses
+                console.log(response);
+                alert('Data berhasil disimpan!');
+                // Misalnya close modal, reset form, reload data table, dll
+                $('#formAktual')[0].reset();
+            },
+            error: function(xhr) {
+                // Handle error
+                console.log(xhr.responseText);
+                alert('Terjadi kesalahan. Silakan cek kembali.');
+            }
+        });
+    });
+
+    // Tombol batal
+    $('#cancelScs').click(function() {
+        $('#formAktual')[0].reset();
+        // Tambahkan logika close modal jika ada
+    });
+});
+</script>
+@endpush

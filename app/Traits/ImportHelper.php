@@ -284,46 +284,46 @@ trait ImportHelper
             });
     }
 
-    // private function import07ManualStreaming(string $filePath): void
-    // {
-    //     // Read and insert in chunks
-    //     // Better memory management
-    //     // 100 13ms / 0.05MB
-    //     // 1K 39ms / 0.57MB
-    //     // 10K 224ms / 5.69MB
-    //     // 100K 1.8s / 56MB
-    //     // 1M memory issue
+    private function import07ManualStreaming(string $filePath): void
+    {
+        // Read and insert in chunks
+        // Better memory management
+        // 100 13ms / 0.05MB
+        // 1K 39ms / 0.57MB
+        // 10K 224ms / 5.69MB
+        // 100K 1.8s / 56MB
+        // 1M memory issue
 
-    //     $data = [];
-    //     $handle = fopen($filePath, 'rb');
-    //     fgetcsv($handle); // skip header
-    //     $now = now()->format('Y-m-d H:i:s');
+        $data = [];
+        $handle = fopen($filePath, 'rb');
+        fgetcsv($handle); // skip header
+        $now = now()->format('Y-m-d H:i:s');
 
-    //     while (($row = fgetcsv($handle)) !== false) {
-    //         $data[] = [
-    //             'custom_id' => $row[0],
-    //             'name' => $row[1],
-    //             'email' => $row[2],
-    //             'company' => $row[3],
-    //             'city' => $row[4],
-    //             'country' => $row[5],
-    //             'birthday' => $row[6],
-    //             'created_at' => $now,
-    //             'updated_at' => $now,
-    //         ];
+        while (($row = fgetcsv($handle)) !== false) {
+            $data[] = [
+                'custom_id' => $row[0],
+                'name' => $row[1],
+                'email' => $row[2],
+                'company' => $row[3],
+                'city' => $row[4],
+                'country' => $row[5],
+                'birthday' => $row[6],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
 
-    //         if (count($data) === 1000) {
-    //             Customer::insert($data);
-    //             $data = [];
-    //         }
-    //     }
+            if (count($data) === 1000) {
+                Customer::insert($data);
+                $data = [];
+            }
+        }
 
-    //     if (! empty($data)) {
-    //         Customer::insert($data);
-    //     }
+        if (! empty($data)) {
+            Customer::insert($data);
+        }
 
-    //     fclose($handle);
-    // }
+        fclose($handle);
+    }
 
     private function import08ManualStreamingWithPdo(string $filePath): void
     {

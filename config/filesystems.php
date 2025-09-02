@@ -60,6 +60,12 @@ return [
             'report' => false,
         ],
 
+        'temp' => [
+            'driver'     => 'local', // Menggunakan penyimpanan lokal server
+            'root'       => storage_path('app/temp'), // Lokasi folder temporary
+            'visibility' => 'private', // File tidak bisa diakses publik via URL
+        ],
+
     ],
 
     /*

@@ -23,7 +23,7 @@ Route::get('/', function () {
 
 // Route::get('/dashboard-data', [DashboardController::class, 'dashboardData']);
 
-// Route::get('/dashboard', [DashboardController::class, 'indexAccounting'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'indexAccounting'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 // get data outlet
 Route::get('/dashboard/general-data', [DashboardController::class, 'getGeneralData'])->middleware(['auth', 'verified']);
@@ -122,6 +122,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [AktualController::class, 'srdrStore']);
         Route::delete('/deleteAktual/{id}', [AktualController::class, 'destroy']);
         Route::get('/getDataFormAktual', [AktualController::class, 'getDataFormAktual'])->name('aktual');
+
+        Route::post('/import/setup', [AktualController::class, 'setup'])->name('import.setup');
+        Route::post('/import/process', [AktualController::class, 'process'])->name('import.process');
+
+        Route::get('/import-edit', [AktualController::class, 'editFormSrdr'])->name('importEditForm');
+        // Route::post('/import/setup-update', [AktualController::class, 'setupUpdate'])->name('import.setup.update');
+        Route::post('/import/setup-update', [AktualController::class, 'setupUpdate'])->name('import.setup.update');
+        // == RUTE BARU UNTUK PROSES GANTI DATA ==
+        // Route::post('/import/convert-for-update', [AktualController::class, 'convertForUpdate'])->name('import.convert');
+        // Route::post('/import/delete-old-data', [AktualController::class, 'deleteOldData'])->name('import.delete');
         
         // Route::get('/download-template-DM', [AktualController::class, 'downloadTempletDM'])->name('download.template.dm');
         Route::get('/download-template', [AktualController::class, 'downloadTemplet'])->name('download.template');

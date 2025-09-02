@@ -17,7 +17,11 @@ use App\Http\Resources\AktualResource;
 use App\Http\Resources\PromosiResource;
 use App\Http\Resources\BrandResource;
 use App\models\Brand;
-// use App\Imports\SrdrImport;
+use App\Exports\SrdrForCsvExport;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
+use App\Imports\SrdrStreamConverter;
 
 class AktualController extends Controller
 {
@@ -88,8 +92,235 @@ class AktualController extends Controller
 
         Excel::import(new SrdrImport, $request->file('file'));
 
-        return response()->json(['message' => 'Import selesai']);
+        return response()->json(['message' => 'Import selesai']);        
     }
+
+    public function setup(Request $request)
+    {
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+
+        $fileName = uniqid('import_') . '.csv';
+        $filePath = storage_path('app/temp/' . $fileName);
+        File::ensureDirectoryExists(storage_path('app/temp'));
+
+        // Buka file handle untuk menulis CSV
+        $fileHandle = fopen($filePath, 'w');
+
+        // Siapkan class konverter dengan file handle
+        $converter = new SrdrStreamConverter($fileHandle);
+        
+        // Tulis header ke file CSV terlebih dahulu
+        fputcsv($fileHandle, $converter->getHeadings());
+
+        // Mulai proses impor-konversi secara streaming
+        Excel::import($converter, $request->file('file'));
+
+        // Tutup file handle
+        fclose($fileHandle);
+        
+        $totalRows = $converter->getProcessedRowCount();
+
+        if ($totalRows === 0) {
+            return response()->json(['error' => 'Tidak ada data yang ditemukan di file Excel.'], 422);
+        }
+
+        // Simpan info di session untuk permintaan selanjutnya
+        session([
+            'import_file' => $filePath,
+            'import_total_rows' => $totalRows,
+            'import_headings' => $converter->getHeadings()
+        ]);
+
+        return response()->json([
+            'total_rows' => $totalRows,
+            'file_name' => $fileName
+        ]);
+    }
+
+    /**
+     * Tahap 2: Memproses satu chunk dari file CSV yang sudah ada.
+     */
+    public function process(Request $request)
+    {
+        $offset = $request->input('offset', 0);
+        $limit = 500; // Proses 500 baris per permintaan
+
+        $filePath = session('import_file');
+        $totalRows = session('import_total_rows');
+        $headings = session('import_headings');
+
+        if (!$filePath || !File::exists($filePath)) {
+            return response()->json(['error' => 'File impor tidak ditemukan. Silakan mulai dari awal.'], 422);
+        }
+
+        // Membaca CSV menggunakan SPL (sangat efisien memori)
+        $file = new \SplFileObject($filePath, 'r');
+        $file->seek($offset + 1); // +1 untuk melewati header jika offset 0
+        
+        $batchValues = [];
+        $rowsRead = 0;
+        while ($rowsRead < $limit && !$file->eof()) {
+            $row = $file->fgetcsv();
+            if ($row && isset($row[0])) { // Pastikan baris tidak kosong
+                $batchValues[] = $row;
+            }
+            $rowsRead++;
+        }
+        
+        // Jika tidak ada data di batch ini, anggap selesai untuk chunk ini
+        if (!empty($batchValues)) {
+            // 1. Siapkan daftar kolom (dijamin urutannya benar)
+            $columnsSql = '`' . implode('`, `', $headings) . '`';
+
+            // 2. Buat placeholder '?' untuk satu baris
+            $rowPlaceholders = '(' . implode(', ', array_fill(0, count($headings), '?')) . ')';
+            
+            // 3. Gandakan placeholder untuk seluruh batch
+            $sql = "INSERT INTO `srdr` ($columnsSql) VALUES " . implode(', ', array_fill(0, count($batchValues), $rowPlaceholders));
+
+            // 4. Ratakan semua nilai dari batch menjadi satu array untuk binding
+            $bindings = [];
+            foreach ($batchValues as $row) {
+                foreach ($row as $value) {
+                    // Ganti string kosong dengan null agar cocok dengan tipe data database
+                    $bindings[] = ($value === '') ? null : $value;
+                }
+            }
+            
+            // 5. Eksekusi query mentah (sangat cepat dan aman dari SQL Injection)
+            DB::insert($sql, $bindings);
+        }
+
+        $newOffset = $offset + $rowsRead;
+
+        if ($newOffset >= $totalRows) {
+            File::delete($filePath);
+            session()->forget(['import_file', 'import_total_rows', 'import_headings']);
+        }
+
+        return response()->json([
+            'processed_rows' => count($batchValues),
+            'total_processed' => min($newOffset, $totalRows),
+            'total_rows' => $totalRows
+        ]);
+    }
+
+    public function editFormSrdr()
+    {
+        // dd('jalane');
+        // die();
+        return view('aktual.import_editSrdr'); // Kita akan buat view ini
+    }
+
+    // public function setupUpdate(Request $request)
+    // {
+    //     ini_set('memory_limit', '-1');
+    //     set_time_limit(0);
+
+    //     $request->validate(['file' => 'required|mimes:xlsx,xls']);
+
+    //     // --- Proses Konversi Excel ke CSV (sama seperti setup biasa) ---
+    //     $fileName = uniqid('import_') . '.csv';
+    //     $filePath = storage_path('app/temp/' . $fileName);
+    //     File::ensureDirectoryExists(storage_path('app/temp'));
+    //     $fileHandle = fopen($filePath, 'w');
+    //     $converter = new SrdrStreamConverter($fileHandle);
+    //     fputcsv($fileHandle, $converter->getHeadings());
+    //     Excel::import($converter, $request->file('file'));
+    //     fclose($fileHandle);
+        
+    //     // --- PROSES PENTING: HAPUS DATA LAMA ---
+    //     $uniqueKeys = $converter->getUniqueKeys();
+
+    //     if (!empty($uniqueKeys)) {
+    //         // Gunakan transaction untuk memastikan proses aman
+    //         DB::transaction(function () use ($uniqueKeys) {
+    //             DB::table('srdr')->where(function ($query) use ($uniqueKeys) {
+    //                 foreach ($uniqueKeys as $key) {
+    //                     $query->orWhere(function ($subQuery) use ($key) {
+    //                         $subQuery->where('branch', $key['branch'])
+    //                                  ->where('brand', $key['brand'])
+    //                                  ->whereDate('sales_date', $key['sales_date']);
+    //                     });
+    //                 }
+    //             })->delete();
+    //         });
+    //     }
+        
+    //     $totalRows = $converter->getProcessedRowCount();
+
+    //     if ($totalRows === 0) {
+    //         return response()->json(['error' => 'Tidak ada data yang ditemukan di file Excel.'], 422);
+    //     }
+
+    //     // Simpan info di session (sama seperti setup biasa)
+    //     session([
+    //         'import_file' => $filePath,
+    //         'import_total_rows' => $totalRows,
+    //         'import_headings' => $converter->getHeadings()
+    //     ]);
+
+    //     return response()->json([
+    //         'total_rows' => $totalRows,
+    //         'deleted_keys_count' => count($uniqueKeys) // Info tambahan untuk frontend
+    //     ]);
+    // }
+
+    public function setupUpdate(Request $request)
+    {
+        // ini_set('memory_limit', '-1');
+        // set_time_limit(0);
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+
+        // --- TAHAP 1: Konversi Excel ke CSV & Ekstrak Kunci Unik ---
+        $fileName = uniqid('import_') . '.csv';
+        $filePath = storage_path('app/temp/' . $fileName);
+        File::ensureDirectoryExists(storage_path('app/temp'));
+        
+        $fileHandle = fopen($filePath, 'w');
+        $converter = new \App\Imports\SrdrStreamConverter($fileHandle);
+        fputcsv($fileHandle, $converter->getHeadings());
+        Excel::import($converter, $request->file('file'));
+        fclose($fileHandle);
+        
+        $uniqueKeys = $converter->getUniqueKeys();
+        $totalRows = $converter->getProcessedRowCount();
+
+        if ($totalRows === 0) {
+            return response()->json(['error' => 'Tidak ada data yang ditemukan di file Excel.'], 422);
+        }
+
+        // --- TAHAP 2: Hapus Data Lama di Database ---
+        $deletedRows = 0;
+        if (!empty($uniqueKeys)) {
+            // Menggunakan strategi 'whereBetween' yang andal
+            $deletedRows = DB::table('srdr')->where(function ($query) use ($uniqueKeys) {
+                foreach ($uniqueKeys as $key) {
+                    if (!empty($key['branch']) && !empty($key['brand']) && !empty($key['sales_date'])) {
+                        $date = $key['sales_date']; // Format Y-m-d
+                        $query->orWhere(function ($subQuery) use ($key, $date) {
+                            $subQuery->where('branch', $key['branch'])
+                                     ->where('brand', $key['brand'])
+                                     ->whereBetween('sales_date', [$date . ' 00:00:00', $date . ' 23:59:59']);
+                        });
+                    }
+                }
+            })->delete();
+        }
+
+        // --- TAHAP 3: Siapkan Sesi untuk Impor per-chunk ---
+        session([
+            'import_file' => $filePath,
+            'import_total_rows' => $totalRows,
+            'import_headings' => $converter->getHeadings(),
+        ]);
+
+        return response()->json([
+            'total_rows' => $totalRows,
+            'deleted_rows_count' => $deletedRows
+        ]);
+    }
+    
 
     public function getDataFormAktual(){
         // $aktual_data = Aktual::with('promosi.outlet.brand')->get();

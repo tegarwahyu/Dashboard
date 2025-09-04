@@ -26,13 +26,16 @@ class SalarOutletController extends Controller
     }
 
     public function getList(Request $request){
-        $data = Outlet_salary::join('tb_outlet as o', 'o.id', '=', 'outlet_salary_monthly.outlet_id')
+        $data = Outlet_salary::join('sub_branch as o', 'o.id', '=', 'outlet_salary_monthly.sub_branch_id')
             ->select(
                 'outlet_salary_monthly.id',
-                'o.nama_outlet as outlet_name',
+                'o.nama_sub_branch as outlet_name',
                 'outlet_salary_monthly.total_salary',
                 'outlet_salary_monthly.month'
             );
+        // $data = Outlet_salary::all();
+        // dd($data->get());
+        // die();
 
         return DataTables::of($data)
             ->addColumn('action', function ($row) {
@@ -55,7 +58,7 @@ class SalarOutletController extends Controller
      */
     public function store(Request $request)
     {
-        // dd($request);
+        // dd($request->outlet_id);
         // die();
         $validated = $request->validate([
             'outlet_id' => 'required|integer|exists:tb_outlet,id',
@@ -68,7 +71,7 @@ class SalarOutletController extends Controller
 
         // Simpan data
         Outlet_salary::create([
-            'outlet_id'     => $validated['outlet_id'],
+            'sub_branch_id' => $request->outlet_id,
             'total_salary'  => $validated['nominal'],
             'month'         => $periode,
         ]);

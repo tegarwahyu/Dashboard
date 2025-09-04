@@ -13,5 +13,5 @@ class Outlet_salary extends Model
 
     protected $table = 'outlet_salary_monthly';
     protected $primaryKey = 'id';
-    protected $fillable = ['outlet_id','total_salary','month'];
+    protected $fillable = ['outlet_id','total_salary','month','sub_branch_id'];
 }
